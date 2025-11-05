@@ -1,0 +1,195 @@
+--// SERVIÇOS
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+--// PLAYER
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+--// GUI PRINCIPAL
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "RennxzHub"
+
+--// BOTÃO 🐉 (lado esquerdo)
+local openButton = Instance.new("TextButton", gui)
+openButton.Size = UDim2.new(0, 45, 0, 45)
+openButton.Position = UDim2.new(0, 20, 1, -100)
+openButton.Text = "🐉"
+openButton.Font = Enum.Font.GothamBold
+openButton.TextScaled = true
+openButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+openButton.TextColor3 = Color3.new(1,1,1)
+openButton.BorderSizePixel = 0
+openButton.Draggable = true
+
+--// MENU PRINCIPAL
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,200,0,170)
+frame.Position = UDim2.new(1,-220,1,-220)
+frame.BackgroundColor3 = Color3.fromRGB(255,0,0)
+frame.BackgroundTransparency = 0.3
+frame.Active = true
+frame.Draggable = true
+
+--// TÍTULO RGB
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,25)
+title.BackgroundTransparency = 1
+title.Text = "tiktok: @rennxzthegoat"
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+task.spawn(function()
+	while task.wait(0.05) do
+		for i=0,1,0.01 do
+			title.TextColor3 = Color3.fromHSV(i,1,1)
+			task.wait(0.05)
+		end
+	end
+end)
+
+--// CRIAR BOTÃO
+local function MakeButton(text, y)
+	local b = Instance.new("TextButton", frame)
+	b.Size = UDim2.new(1,-10,0,30)
+	b.Position = UDim2.new(0,5,0,y)
+	b.BackgroundColor3 = Color3.fromRGB(40,0,0)
+	b.TextColor3 = Color3.new(1,1,1)
+	b.Font = Enum.Font.GothamBold
+	b.TextScaled = true
+	b.Text = text
+	return b
+end
+
+local speedBtn = MakeButton("SPEED",30)
+local noclipBtn = MakeButton("NOCLIP",65)
+local tweenBtn = MakeButton("TWEEN",100)
+local jumpBtn = MakeButton("JUMP",135)
+
+--// ANIMAÇÃO ABRIR/FECHAR MENU
+local aberto = true
+local function abrir()
+	frame.Visible = true
+	TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{Position = UDim2.new(1,-220,1,-220)}):Play()
+end
+
+local function fechar()
+	TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{Position = UDim2.new(1,-220,1,0)}):Play()
+	task.wait(0.3)
+	frame.Visible = false
+end
+
+openButton.MouseButton1Click:Connect(function()
+	aberto = not aberto
+	if aberto then abrir() else fechar() end
+end)
+
+abrir() -- menu inicia aberto
+
+--// SALVA POSIÇÃO AO EXECUTAR
+local savedPos = hrp.Position
+
+--// SPEED (250 ON / 60 OFF – corrigido e constante)
+local speedOn = false
+local normalSpeed = 60
+local fastSpeed = 250
+
+speedBtn.MouseButton1Click:Connect(function()
+	speedOn = not speedOn
+	speedBtn.Text = speedOn and "SPEED (ON)" or "SPEED (OFF)"
+	if speedOn then
+		humanoid.WalkSpeed = fastSpeed
+	else
+		humanoid.WalkSpeed = normalSpeed
+	end
+end)
+
+-- mantém speed mesmo segurando ferramentas
+player.Character.ChildAdded:Connect(function(c)
+	if c:IsA("Tool") then
+		task.wait(0.1)
+		if speedOn then
+			humanoid.WalkSpeed = fastSpeed
+		else
+			humanoid.WalkSpeed = normalSpeed
+		end
+	end
+end)
+
+-- garante speed a cada frame (corrige bug de reset)
+RunService.Heartbeat:Connect(function()
+	if humanoid then
+		if speedOn and humanoid.WalkSpeed ~= fastSpeed then
+			humanoid.WalkSpeed = fastSpeed
+		elseif not speedOn and humanoid.WalkSpeed ~= normalSpeed then
+			humanoid.WalkSpeed = normalSpeed
+		end
+	end
+end)
+
+--// NOCLIP
+local noclip = false
+noclipBtn.MouseButton1Click:Connect(function()
+	noclip = not noclip
+	noclipBtn.Text = noclip and "NOCLIP (ON)" or "NOCLIP (OFF)"
+end)
+
+RunService.Stepped:Connect(function()
+	if noclip and char then
+		for _,v in pairs(char:GetDescendants()) do
+			if v:IsA("BasePart") then v.CanCollide = false end
+		end
+	end
+end)
+
+--// TWEEN (vai de cima – 70m)
+tweenBtn.MouseButton1Click:Connect(function()
+	if hrp and savedPos then
+		local startPos = savedPos + Vector3.new(0,70,0)
+		hrp.CFrame = CFrame.new(startPos)
+		local tween = TweenService:Create(
+			hrp,
+			TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.Out),
+			{CFrame = CFrame.new(savedPos)}
+		)
+		tween:Play()
+	end
+end)
+
+--// JUMP INFINITO
+local jump = false
+jumpBtn.MouseButton1Click:Connect(function()
+	jump = not jump
+	jumpBtn.Text = jump and "JUMP (ON)" or "JUMP (OFF)"
+end)
+
+UserInputService.JumpRequest:Connect(function()
+	if jump and humanoid then
+		humanoid:ChangeState("Jumping")
+	end
+end)
+
+--// ESP AUTOMÁTICO
+local function createESP(p)
+	if p.Character and not p.Character:FindFirstChild("Highlight") then
+		local h = Instance.new("Highlight", p.Character)
+		h.FillTransparency = 0.5
+		h.OutlineColor = Color3.fromRGB(255,0,0)
+	end
+end
+
+for _,p in pairs(Players:GetPlayers()) do
+	if p ~= player then createESP(p) end
+end
+
+Players.PlayerAdded:Connect(function(p)
+	p.CharacterAdded:Connect(function()
+		task.wait(1)
+		createESP(p)
+	end)
+end)
